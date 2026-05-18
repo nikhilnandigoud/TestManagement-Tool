@@ -1,0 +1,86 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+.m2/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Application
+*.log
+temp-files/
+.env
+.env.local
+
+# Spring Boot
+application-local.yml
+application-dev.yml
+application-prod.yml
+
+# Local JDKs and tools (ignore local installations/binaries)
+tools/jdk17/
+
+# User guides and documentation (large files)
+src/main/resources/user-guides/
+# Examples:
+# src/main/resources/user-guides/DMDEDT/
+# src/main/resources/user-guides/DAN/
+# src/main/resources/user-guides/bestPractices/
+
+# Sensitive and credentials (Never commit!)
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.aws/
+.env.production
+config/credentials
+api-keys.txt
+passwords.txt
+private-keys/
+*.keystore
+
+# Build and deployment scripts (local development only)
+build-and-start.*
+start.*
+stop.*
+start-with-env.*
+configure-azure.*
+chat-validation-report.*
+
+# Test and temporary files
+test-chat-*.ps1
+tmp_testcases*.json
+app_logs.txt
+app_output.txt
+app_run_latest*
+buildlog.txt

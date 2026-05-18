@@ -1,0 +1,103 @@
+spring:
+  application:
+    name: ai-testmanagement-tool
+  main:
+    web-application-type: servlet
+  web:
+    resources:
+      cache:
+        period: 0
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:qa_automation_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    sql-migration-prefix: V
+    table: flyway_schema_history
+    out-of-order: true
+    validate-on-migrate: false
+
+server:
+  port: 8081
+  address: 0.0.0.0
+  servlet:
+    context-path: /testmanagement
+
+logging:
+  level:
+    root: INFO
+    com.qaautomation: INFO
+    org.springframework.boot: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.springframework.data: WARN
+    org.hibernate: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Azure OpenAI Configuration (Phase 4)
+azure:
+  openai:
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    deployment-gpt4: ${AZURE_OPENAI_DEPLOYMENT_GPT4:gpt-4-deployment}
+    deployment-embedding: ${AZURE_OPENAI_DEPLOYMENT_EMBEDDING:text-embedding-3-small-deployment}
+    timeout-seconds: 30
+    max-retries: 3
+    embedding-dimension: 1536
+
+# External API Configuration
+external-apis:
+  openai:
+    api-key: ${OPENAI_API_KEY:sk-test-key}
+    model: gpt-4
+    temperature: 0.3
+    max-tokens: 2000
+  azure-openai:
+    enabled: ${AZURE_OPENAI_ENABLED:true}
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    deployment: ${AZURE_OPENAI_DEPLOYMENT_GPT4:gpt-4-deployment}
+    api-version: ${AZURE_OPENAI_API_VERSION:2024-02-15-preview}
+  jira:
+    base-url: ${JIRA_BASE_URL:https://your-domain.atlassian.net}
+    api-token: ${JIRA_API_TOKEN:}
+
+# Vector Search Configuration
+vector-search:
+  similarity-threshold: ${VECTOR_SIMILARITY_THRESHOLD:0.70}
+  deduplication-threshold: ${VECTOR_DEDUPLICATION_THRESHOLD:0.85}
+  search-limit: ${VECTOR_SEARCH_LIMIT:5}
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY:sk-test-key}
+    url: https://api.openai.com/v1/embeddings
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    deployment: ${AZURE_OPENAI_DEPLOYMENT_GPT4:gpt4-turbo}
+    api-version: ${AZURE_OPENAI_API_VERSION:2024-02-15-preview}
+  ocr:
+    enabled: false
+
+# File Upload Configuration
+file:
+  upload:
+    dir: ${FILE_UPLOAD_DIR:}
+file-upload:
+  max-size: 52428800 # 50MB
+  temp-dir: ./temp-files
+  supported-formats: pdf,docx,txt,doc,jpg,png,jpeg

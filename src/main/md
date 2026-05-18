@@ -1,0 +1,327 @@
+Chat-Based AI Agent: Full Stack Implementation
+
+This document outlines the complete full-stack implementation for the RAG-based AI Agent, combining a React frontend with a Python (FastAPI) and PostgreSQL (pgvector) backend.
+
+1. System Architecture
+
+Frontend: React (Tailwind CSS, Lucide Icons)
+
+Backend: Python 3.11+, FastAPI, SQLAlchemy
+
+Database: PostgreSQL with the pgvector extension
+
+AI Models: OpenAI gpt-4o (chat) and text-embedding-3-small (embeddings)
+
+2. Backend Implementation (Python / FastAPI)
+
+This is the core backend logic. It handles the Priority Context Engine, generates embeddings, queries the vector database, and streams the context to OpenAI.
+
+Prerequisites & Requirements (requirements.txt)
+
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pgvector
+openai
+pydantic
+python-dotenv
+
+
+Backend Application (main.py)
+
+import os
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Depends
+from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, String, Text, DateTime, func
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from pgvector.sqlalchemy import Vector
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# --- DATABASE SETUP ---
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/rag_db")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Vector Database Model
+class KnowledgeVector(Base):
+    __tablename__ = "knowledge_vectors"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    source_type = Column(String) # 'scenario', 'guide', 'file', 'chat_history'
+    content = Column(Text)
+    embedding = Column(Vector(1536)) # For text-embedding-3-small
+    created_at = Column(DateTime, default=func.now())
+
+# Initialize DB (Run once)
+Base.metadata.create_all(bind=engine)
+
+# --- APP SETUP ---
+app = FastAPI(title="RAG Agent API")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Dependency to get DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# --- MODELS ---
+class ChatRequest(BaseModel):
+    message: str
+    scenario_text: str
+    action_type: Optional[str] = "chat" # chat, modify, merge, etc.
+
+# --- CORE LOGIC ---
+def get_embedding(text: str) -> list[float]:
+    """Generates embedding using OpenAI."""
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
+    )
+    return response.data[0].embedding
+
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
+    # 1. Generate Embedding for User Message
+    user_vector = get_embedding(req.message)
+
+    # 2. Vector Search (Priority 4)
+    # Find top 3 most similar past cases/knowledge
+    similar_docs = db.query(KnowledgeVector)\
+        .order_by(KnowledgeVector.embedding.l2_distance(user_vector))\
+        .limit(3)\
+        .all()
+    
+    historical_context = "\n".join([doc.content for doc in similar_docs])
+
+    # 3. Assemble the Prompt (Priority System)
+    system_prompt = f"""
+    You are an expert QA & Testing AI Agent. 
+    Always follow this context hierarchy:
+    
+    PRIORITY 1 (Current Scenario):
+    {req.scenario_text}
+    
+    PRIORITY 2 (Guides & Rules):
+    - Always validate input fields.
+    - Check for edge cases on payment gateways.
+    
+    PRIORITY 3 (Historical Context via pgvector):
+    {historical_context}
+    
+    Action Requested: {req.action_type}
+    """
+
+    # 4. Generate Response from LLM
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": req.message}
+            ]
+        )
+        ai_response = completion.choices[0].message.content
+        
+        # 5. Background Task: Embed & Store this new interaction
+        # In production, use BackgroundTasks
+        new_interaction = KnowledgeVector(
+            source_type="chat_history",
+            content=f"User: {req.message}\nAI: {ai_response}",
+            embedding=get_embedding(f"{req.message} {ai_response}")
+        )
+        db.add(new_interaction)
+        db.commit()
+
+        return {
+            "response": ai_response,
+            "vector_hits": len(similar_docs)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+3. Frontend Implementation (React)
+
+The React frontend includes the visual priority stack and the action toolbars.
+
+React Application (App.jsx)
+
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  MessageSquare, Settings, Plus, FileText, Database, 
+  Upload, Send, RefreshCw, Edit3, Layers, Trash2, 
+  BrainCircuit, Search, Zap, FileCode2
+} from 'lucide-react';
+
+const INITIAL_SCENARIO = "E-commerce Checkout Flow: Guest user purchasing a single physical item with a credit card.";
+
+export default function App() {
+  const [messages, setMessages] = useState([
+    {
+      id: 'system-1',
+      role: 'assistant',
+      content: "Hello. I am your QA Agent connected to pgvector. What scenario are we working on?",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isActionable: false
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processStep, setProcessStep] = useState('');
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isProcessing]);
+
+  // Handle Communication with Backend
+  const handleSend = async (customText = null, actionType = "chat") => {
+    const textToSend = customText || inputValue;
+    if (!textToSend.trim()) return;
+
+    // Add User Message to UI
+    const userMsgId = `user-${Date.now()}`;
+    setMessages(prev => [...prev, {
+      id: userMsgId,
+      role: 'user',
+      content: textToSend,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setInputValue('');
+    setIsProcessing(true);
+
+    try {
+      // Simulate/Show processing steps for UX
+      setProcessStep('1. Analyzing Scenario...');
+      await new Promise(r => setTimeout(r, 500));
+      setProcessStep('2. Querying pgvector...');
+      await new Promise(r => setTimeout(r, 500));
+      setProcessStep('3. Generating response...');
+
+      /* ACTUAL API CALL (Commented out for standalone frontend simulation)
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: textToSend, 
+            scenario_text: INITIAL_SCENARIO,
+            action_type: actionType
+          })
+        });
+        const data = await response.json();
+      */
+
+      // Simulated Backend Response
+      await new Promise(r => setTimeout(r, 1000));
+      const mockResponse = "Based on the scenario and historical vectors, here are your test cases...";
+      
+      setMessages(prev => [...prev, {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: mockResponse, // Replace with `data.response` in prod
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isActionable: true
+      }]);
+    } catch (error) {
+      console.error("Error communicating with backend:", error);
+    } finally {
+      setIsProcessing(false);
+      setProcessStep('');
+    }
+  };
+
+  const handleAction = (actionType, msgId) => {
+    let prompt = "";
+    switch(actionType) {
+      case 'Regenerate': prompt = "Regenerate those test cases."; break;
+      case 'Modify': prompt = "Modify the previous cases."; break;
+      case 'Merge': prompt = "Merge these with existing cases."; break;
+      case 'Delete': 
+        setMessages(prev => prev.filter(m => m.id !== msgId));
+        return;
+    }
+    handleSend(prompt, actionType);
+  };
+
+  // UI Components
+  const ActionToolbar = ({ msgId }) => (
+    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-700/50">
+      <button onClick={() => handleAction('Regenerate', msgId)} className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded"><RefreshCw size={12}/> Regenerate</button>
+      <button onClick={() => handleAction('Modify', msgId)} className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded"><Edit3 size={12}/> Modify</button>
+      <button onClick={() => handleAction('Merge', msgId)} className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-900/30 text-blue-400 rounded"><FileCode2 size={12}/> Merge</button>
+      <button onClick={() => handleAction('Delete', msgId)} className="flex items-center gap-1 px-3 py-1 text-xs bg-red-900/30 text-red-400 rounded ml-auto"><Trash2 size={12}/> Delete</button>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-slate-950 text-slate-200">
+      <div className="flex-1 flex flex-col h-full relative p-6">
+        <header className="flex items-center gap-2 mb-6">
+          <Zap size={20} className="text-indigo-400"/>
+          <h1 className="font-semibold text-xl">QA Test Case Generator</h1>
+        </header>
+
+        <div className="flex-1 overflow-y-auto space-y-6 pb-24">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`p-4 max-w-[80%] rounded-xl ${msg.role === 'user' ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'}`}>
+                <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                {msg.isActionable && <ActionToolbar msgId={msg.id} />}
+              </div>
+            </div>
+          ))}
+          {isProcessing && <div className="text-sm text-indigo-400 animate-pulse">{processStep}</div>}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="absolute bottom-6 left-6 right-6">
+          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 p-2 rounded-xl">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Ask the agent..."
+              className="flex-1 bg-transparent border-none outline-none text-sm px-2"
+            />
+            <button onClick={() => handleSend()} className="p-2 bg-indigo-600 rounded-lg"><Send size={16}/></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+4. Setup and Run Instructions
+
+1. Database Setup
+
+Ensure PostgreSQL is running and the pgvector extension is enabled.
+
+CREATE EXTENSION vector;
+
+
+2. Run the Backend
+
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+
+
+3. Run the Frontend
+
+npx create-react-app frontend
+cd frontend
+npm install lucide-react tailwindcss
+npm start

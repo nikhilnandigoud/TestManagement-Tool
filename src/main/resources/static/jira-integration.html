@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira Integration - QA Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        :root {
+            --primary-color: #0052cc;
+            --primary-hover: #0065ff;
+            --success-color: #36b37e;
+            --success-bg: #e3fcef;
+            --danger-color: #ff5630;
+            --danger-bg: #ffebe6;
+            --warning-color: #ffab00;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f5f7; }
+        .status-connected { color: var(--success-color); }
+        .status-disconnected { color: var(--danger-color); }
+        .btn-primary { background-color: var(--primary-color); transition: all 150ms; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #6b7280; transition: all 150ms; }
+        .btn-secondary:hover { background-color: #4b5563; }
+        .form-input { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+        .form-input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1); }
+        .alert { padding: 12px 16px; border-radius: 6px; font-size: 14px; }
+        .alert-success { background-color: var(--success-bg); color: var(--success-color); border: 1px solid var(--success-color); }
+        .alert-danger { background-color: var(--danger-bg); color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .alert-info { background-color: #dbeafe; color: #0c63e4; border: 1px solid #0c63e4; }
+        .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .spinner { border: 3px solid rgba(0, 82, 204, 0.2); border-top-color: var(--primary-color); border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .table-striped tbody tr:nth-child(odd) { background-color: #f9fafb; }
+        .table-striped tbody tr:hover { background-color: #f3f4f6; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-success { background-color: var(--success-bg); color: var(--success-color); }
+        .badge-danger { background-color: var(--danger-bg); color: var(--danger-color); }
+        .badge-warning { background-color: #fff4d9; color: var(--warning-color); }
+        .hidden { display: none; }
+        .tab-content.hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Jira Integration</h1>
+                    <p class="text-gray-500 text-sm mt-1">Connect your QA Platform with Jira to sync test cases and manage automation</p>
+                </div>
+                <div id="connectionStatus" class="flex items-center space-x-2">
+                    <span id="statusDot" class="w-3 h-3 rounded-full bg-red-500"></span>
+                    <span id="statusText" class="text-sm font-medium text-red-600">Not Connected</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Tabs -->
+        <div class="bg-white border-b border-gray-200 mb-6 rounded-t-lg">
+            <div class="flex space-x-8 px-6">
+                <button class="tab-btn active px-1 py-4 text-sm font-medium text-gray-700 border-b-2 border-blue-600 cursor-pointer" data-tab="configuration">
+                    Configuration
+                </button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 border-b-2 border-transparent cursor-pointer hover:text-gray-700" data-tab="projects">
+                    Projects & Issues
+                </button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 border-b-2 border-transparent cursor-pointer hover:text-gray-700" data-tab="push">
+                    Push Test Cases
+                </button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 border-b-2 border-transparent cursor-pointer hover:text-gray-700" data-tab="history">
+                    Push History
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="configuration" class="tab-content">
+            <div class="card">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Jira Server Configuration</h2>
+                <form id="jiraConfigForm" class="space-y-6">
+                    <div class="grid grid-cols-1 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Jira Server URL <span class="text-red-500">*</span></label>
+                            <input 
+                                type="url" 
+                                id="jiraUrl" 
+                                placeholder="https://yourcompany.atlassian.net"
+                                class="form-input w-full"
+                                required
+                            >
+                            <p class="text-gray-500 text-xs mt-1">Example: https://mycompany.atlassian.net</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email/Username <span class="text-red-500">*</span></label>
+                            <input 
+                                type="email" 
+                                id="jiraEmail"
+                                placeholder="your.email@company.com"
+                                class="form-input w-full"
+                                required
+                            >
+                            <p class="text-gray-500 text-xs mt-1">Jira account email or username</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">API Token <span class="text-red-500">*</span></label>
+                            <input 
+                                type="password" 
+                                id="jiraToken"
+                                placeholder="Enter your API Token"
+                                class="form-input w-full"
+                                required
+                            >
+                            <p class="text-gray-500 text-xs mt-1">
+                                <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" class="text-blue-600 hover:underline">Generate token</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                        <button 
+                            type="button" 
+                            id="testConnectionBtn"
+                            class="px-6 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 font-medium text-sm transition"
+                        >
+                            Test Connection
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-6 py-2 btn-primary text-white rounded-md font-medium text-sm"
+                        >
+                            Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- API Info -->
+            <div class="card bg-blue-50 border-blue-200">
+                <h3 class="text-sm font-semibold text-blue-900 mb-3">📋 Getting Your Credentials</h3>
+                <ol class="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+                    <li>Log in to your Jira account</li>
+                    <li>Go to <strong>Settings → API tokens</strong> (or <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" class="text-blue-600 underline">click here</a>)</li>
+                    <li>Click <strong>Create API token</strong></li>
+                    <li>Copy the generated token and paste it above</li>
+                    <li>Your Jira URL is: <strong>https://[your-workspace].atlassian.net</strong></li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Projects & Issues Tab -->
+        <div id="projects" class="tab-content hidden">
+            <div class="card">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Available Projects</h2>
+                <div id="projectsContainer" class="space-y-4">
+                    <p class="text-gray-500 text-sm">Configure Jira connection first to view projects</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Push Test Cases Tab -->
+        <div id="push" class="tab-content hidden">
+            <div class="card">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Push Test Cases to Jira</h2>
+                
+                <form id="pushForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Project Key <span class="text-red-500">*</span></label>
+                            <select id="projectKey" class="form-input w-full" required>
+                                <option value="">Select a project</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Issue Type <span class="text-red-500">*</span></label>
+                            <select id="issueType" class="form-input w-full" required>
+                                <option value="">Select issue type</option>
+                                <option value="Test">Test</option>
+                                <option value="Task">Task</option>
+                                <option value="Story">Story</option>
+                                <option value="Bug">Bug</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Test Cases <span class="text-red-500">*</span></label>
+                        <div id="testCasesList" class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
+                            <p class="text-gray-500 text-sm">Loading test cases...</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="autoLinkIssue" class="w-4 h-4">
+                            <span class="text-sm text-gray-700">Auto-link to Jira issues</span>
+                        </label>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                        <button type="reset" class="px-6 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 font-medium text-sm">
+                            Clear
+                        </button>
+                        <button type="submit" class="px-6 py-2 btn-primary text-white rounded-md font-medium text-sm">
+                            <span id="pushBtnText">Push to Jira</span>
+                            <span id="pushSpinner" class="spinner ml-2 inline-block hidden"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Push History Tab -->
+        <div id="history" class="tab-content hidden">
+            <div class="card">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Push History</h2>
+                <div id="historyContainer" class="overflow-x-auto">
+                    <table class="w-full table-striped text-sm">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Date</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Project</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Test Cases</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Success</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Failed</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-700">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">No push history available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/jira-integration.js"></script>
+
+</body>
+</html>

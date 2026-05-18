@@ -1,0 +1,562 @@
+<!-- Integration Settings Page Component -->
+<!-- File: src/main/resources/templates/integrations/settings.html -->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 28px;
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            background-size: contain;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .radio-option input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #0066cc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0052a3;
+        }
+
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-connected {
+            background-color: #28a745;
+        }
+
+        .status-error {
+            background-color: #dc3545;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+        }
+
+        .connection-status {
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .connection-status.show {
+            display: block;
+        }
+
+        .connection-status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .connection-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .section-divider {
+            border-top: 1px solid #eee;
+            margin: 24px 0;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Integration Settings</h1>
+            <p style="color: #666; margin-top: 8px;">Configure your Jira and GitHub integrations</p>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <!-- Jira Section -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">🔗</span>
+                Jira Configuration
+            </h2>
+
+            <form id="jiraForm">
+                <div class="form-group">
+                    <label for="jiraWorkspaceUrl">Jira Workspace URL</label>
+                    <input 
+                        type="text" 
+                        id="jiraWorkspaceUrl" 
+                        name="jiraWorkspaceUrl"
+                        placeholder="https://your-domain.atlassian.net"
+                        required>
+                    <p class="help-text">Your Jira Cloud or Server URL (e.g., https://mycompany.atlassian.net)</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Authentication Method</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="jiraOAuth" 
+                                name="jiraAuthMethod" 
+                                value="OAUTH"
+                                checked>
+                            <label for="jiraOAuth" style="margin: 0;">OAuth 2.0</label>
+                        </div>
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="jiraPAT" 
+                                name="jiraAuthMethod" 
+                                value="PAT">
+                            <label for="jiraPAT" style="margin: 0;">Personal Access Token</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="jiraToken">API Token</label>
+                    <input 
+                        type="password" 
+                        id="jiraToken" 
+                        name="jiraToken"
+                        placeholder="Paste your token here"
+                        required>
+                    <p class="help-text">Your Jira API token (will be encrypted and never displayed)</p>
+                </div>
+
+                <div id="jiraConnectionStatus" class="connection-status"></div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary btn-small" onclick="testJiraConnection()">
+                        Test Connection
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- GitHub Section -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">🐙</span>
+                GitHub Configuration
+            </h2>
+
+            <form id="githubForm">
+                <div class="form-group">
+                    <label for="githubToken">Personal Access Token</label>
+                    <input 
+                        type="password" 
+                        id="githubToken" 
+                        name="githubToken"
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        required>
+                    <p class="help-text">
+                        Create a PAT with <code>repo</code> and <code>read:user</code> scopes
+                        <a href="https://github.com/settings/tokens" target="_blank" style="margin-left: 8px;">
+                            Generate Token →
+                        </a>
+                    </p>
+                </div>
+
+                <div id="githubConnectionStatus" class="connection-status"></div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary btn-small" onclick="testGitHubConnection()">
+                        Test Connection
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- GitLab Section (Optional - P2 feature) -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">🦊</span>
+                GitLab Configuration <span style="font-size: 12px; color: #999;">(Optional)</span>
+            </h2>
+
+            <form id="gitlabForm">
+                <div class="form-group">
+                    <label for="gitlabToken">Personal Access Token</label>
+                    <input 
+                        type="password" 
+                        id="gitlabToken" 
+                        name="gitlabToken"
+                        placeholder="glpat-xxxxxxxxxxxxxxxx">
+                    <p class="help-text">Optional: GitLab MR integration coming soon</p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="settings-section">
+            <h2 class="section-title">Actions</h2>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="saveAllSettings()">
+                    Save All Settings
+                </button>
+                <button class="btn btn-secondary" onclick="resetForm()">
+                    Reset
+                </button>
+                <button class="btn btn-danger" onclick="revokeAllTokens()">
+                    Revoke All Tokens
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/testmanagement/api/integrations';
+
+        // Load settings on page load
+        document.addEventListener('DOMContentLoaded', loadSettings);
+
+        async function loadSettings() {
+            try {
+                const response = await fetch(`${API_BASE}/settings`, {
+                    headers: { 'X-User-Id': getUserId() }
+                });
+                const data = await response.json();
+
+                if (data.configured) {
+                    // Populate form (tokens will be masked)
+                    document.getElementById('jiraWorkspaceUrl').value = data.data.jiraWorkspaceUrl || '';
+                    document.getElementById('jiraToken').placeholder = '••••••••••••••••';
+                    document.getElementById('githubToken').placeholder = '••••••••••••••••';
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        async function testJiraConnection() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Testing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/test-connections`, {
+                    method: 'POST',
+                    headers: { 'X-User-Id': getUserId() }
+                });
+                const data = await response.json();
+
+                const statusDiv = document.getElementById('jiraConnectionStatus');
+                if (data.connections.jira) {
+                    statusDiv.className = 'connection-status show success';
+                    statusDiv.innerHTML = '<span class="status-indicator status-connected"></span>Connected to Jira';
+                } else {
+                    statusDiv.className = 'connection-status show error';
+                    statusDiv.innerHTML = '<span class="status-indicator status-error"></span>Failed to connect to Jira';
+                }
+            } catch (error) {
+                document.getElementById('jiraConnectionStatus').innerHTML = 
+                    '<span class="status-indicator status-error"></span>Error: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            }
+        }
+
+        async function testGitHubConnection() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Testing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/test-connections`, {
+                    method: 'POST',
+                    headers: { 'X-User-Id': getUserId() }
+                });
+                const data = await response.json();
+
+                const statusDiv = document.getElementById('githubConnectionStatus');
+                if (data.connections.github) {
+                    statusDiv.className = 'connection-status show success';
+                    statusDiv.innerHTML = '<span class="status-indicator status-connected"></span>Connected to GitHub';
+                } else {
+                    statusDiv.className = 'connection-status show error';
+                    statusDiv.innerHTML = '<span class="status-indicator status-error"></span>Failed to connect to GitHub';
+                }
+            } catch (error) {
+                document.getElementById('githubConnectionStatus').innerHTML = 
+                    '<span class="status-indicator status-error"></span>Error: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            }
+        }
+
+        async function saveAllSettings() {
+            const credentials = {
+                jiraWorkspaceUrl: document.getElementById('jiraWorkspaceUrl').value,
+                jiraAuthMethod: document.querySelector('input[name="jiraAuthMethod"]:checked').value,
+                jiraToken: document.getElementById('jiraToken').value,
+                githubToken: document.getElementById('githubToken').value,
+                gitlabToken: document.getElementById('gitlabToken').value || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': getUserId()
+                    },
+                    body: JSON.stringify(credentials)
+                });
+
+                const data = await response.json();
+                showAlert(data.message || 'Settings saved successfully', 'success');
+                loadSettings();
+            } catch (error) {
+                showAlert('Failed to save settings: ' + error.message, 'error');
+            }
+        }
+
+        async function revokeAllTokens() {
+            if (!confirm('Are you sure you want to revoke all tokens? You will need to reconfigure integrations.')) {
+                return;
+            }
+
+            try {
+                await Promise.all([
+                    fetch(`${API_BASE}/settings/jira`, { method: 'DELETE', headers: { 'X-User-Id': getUserId() } }),
+                    fetch(`${API_BASE}/settings/github`, { method: 'DELETE', headers: { 'X-User-Id': getUserId() } })
+                ]);
+                showAlert('All tokens revoked', 'success');
+                resetForm();
+            } catch (error) {
+                showAlert('Failed to revoke tokens: ' + error.message, 'error');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('jiraForm').reset();
+            document.getElementById('githubForm').reset();
+            document.getElementById('gitlabForm').reset();
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert show alert-${type}`;
+            alert.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        function getUserId() {
+            const user = sessionStorage.getItem('user');
+            if (user) {
+                try {
+                    return JSON.parse(user).username || 'anonymous';
+                } catch {
+                    return user;
+                }
+            }
+            return 'anonymous';
+        }
+    </script>
+</body>
+</html>
